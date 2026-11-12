@@ -44,4 +44,37 @@ st.info(f"Loaded model: **{model_name}**")
 url_input = st.text_input("Enter a URL to analyze", placeholder="http://example-login-security.com")
 analyze_clicked = st.button("Analyze", type="primary")
 
+if analyze_clicked:
+    if not url_input.strip():
+        st.warning("Please enter a URL!")
+    else:
+        features = extract_url_features(url_input)
+        feature_df = pd.DataFrame([features])[feature_names]
+
+        X = scaler.transform(feature_df) if needs_scaling else feature_df.values
+
+        proba = model.predict_proba(X)[0]
+        phishing_prob = proba[1] * 100  # class 1 = phishing
+        prediction = "Likely Phishing" if phishing_prob >= 50 else "Likely Legitimate"
+
+        st.subheader("PHISHING URL HUNTER — Result")
+        st.write(f"*URL:* {url_input}")
+
+        if prediction == "Likely Phishing":
+            st.error(f"*Prediction: {prediction}*")
+        else:
+            st.success(f"*Prediction: {prediction}*")
+
+        st.metric("Phishing Probability", f"{phishing_prob:.1f}%")
+        st.progress(min(max(phishing_prob / 100, 0.0), 1.0))
+        st.caption(f"Model used: {model_name}")
+
+        with st.expander("Extracted URL features"):
+            st.dataframe(feature_df.T.rename(columns={0: "value"}))
+
+st.divider()
+st.caption(
+    "This tool analyzes the structure of the URL text only — it never visits the "
+    "website. Always exercise caution with unfamiliar links regardless of the score."
+)
 
